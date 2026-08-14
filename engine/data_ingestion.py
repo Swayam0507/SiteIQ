@@ -73,14 +73,16 @@ def _read_raster_as_vector(filepath: str) -> gpd.GeoDataFrame:
                           or an empty GeoDataFrame if `rasterio` is missing or reading fails.
     """
     try:
-        import rasterio
-        from rasterio.features import shapes
-    except ImportError:
+        import importlib
+        rio = importlib.import_module("rasterio")
+        rio_features = importlib.import_module("rasterio.features")
+        shapes = getattr(rio_features, "shapes")
+    except Exception:
         logger.error(f"rasterio package is required to read raster file {filepath}")
         return gpd.GeoDataFrame()
     try:
         results = []
-        with rasterio.open(filepath) as src:
+        with rio.open(filepath) as src:
             image = src.read(1) # Read first band
             mask = image != src.nodata if src.nodata is not None else image > 0
             
