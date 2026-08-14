@@ -38,7 +38,16 @@ DEFAULT_FILENAMES = {
 
 
 def _read_wkt(filepath: str) -> gpd.GeoDataFrame:
-    """Read a raw WKT text file into a GeoDataFrame."""
+    """
+    Parses a Well-Known Text (WKT) format file into a GeoPandas GeoDataFrame.
+
+    Args:
+        filepath (str): Path to the WKT text or CSV file containing raw WKT geometry strings.
+
+    Returns:
+        gpd.GeoDataFrame: A GeoDataFrame with parsed geometry objects in EPSG:4326 CRS,
+                          or an empty GeoDataFrame if reading fails.
+    """
     try:
         df = pd.read_csv(filepath, header=None, names=["wkt_geom"])
         df["geometry"] = df["wkt_geom"].apply(wkt.loads)
@@ -50,7 +59,19 @@ def _read_wkt(filepath: str) -> gpd.GeoDataFrame:
 
 
 def _read_raster_as_vector(filepath: str) -> gpd.GeoDataFrame:
-    """Open a GeoTIFF and extract non-null pixel areas as polygon features."""
+    """
+    Extracts non-null pixel values from a GeoTIFF raster file and vectorizes them into polygon geometries.
+
+    Uses a lazy-import mechanism for `rasterio` to maintain fast startup times and avoid
+    top-level dependency overhead.
+
+    Args:
+        filepath (str): Path to the target GeoTIFF (.tif / .tiff) raster file.
+
+    Returns:
+        gpd.GeoDataFrame: Vectorized polygon shapes extracted from the raster band,
+                          or an empty GeoDataFrame if `rasterio` is missing or reading fails.
+    """
     try:
         import rasterio
         from rasterio.features import shapes
@@ -78,7 +99,19 @@ def _read_raster_as_vector(filepath: str) -> gpd.GeoDataFrame:
 
 
 def _read_file(filepath: str) -> gpd.GeoDataFrame:
-    """Smart reader dispatching based on extension."""
+    """
+    Smart spatial file reader dispatcher supporting GeoJSON, Shapefile, GPKG, GeoTIFF, WKT, and CSV formats.
+
+    Automatically inspects file extensions and delegates to the appropriate reader backend
+    (GeoPandas, WKT parser, or Rasterio vectorizer).
+
+    Args:
+        filepath (str): Path to the spatial file to ingest.
+
+    Returns:
+        gpd.GeoDataFrame: Loaded spatial dataset in GeoDataFrame format,
+                          or an empty GeoDataFrame on file missing or parse error.
+    """
     if not os.path.exists(filepath):
         logger.warning(f"File not found: {filepath}")
         return gpd.GeoDataFrame()
@@ -103,7 +136,16 @@ def _read_file(filepath: str) -> gpd.GeoDataFrame:
 
 
 def _validate_layer(name: str, gdf: gpd.GeoDataFrame) -> bool:
-    """Validate layer bounds, geometries, and required attribute columns."""
+    """
+    Validates spatial layer integrity, ensuring non-empty geometries and required schema columns.
+
+    Args:
+        name (str): Name of the spatial category layer (e.g., 'demographics', 'competition').
+        gdf (gpd.GeoDataFrame): GeoDataFrame to validate.
+
+    Returns:
+        bool: True if the layer passes basic non-empty geometry checks; logs warnings for missing fields.
+    """
     if gdf is None or gdf.empty:
         logger.warning(f"Validation Failed: Layer '{name}' is empty or could not be loaded.")
         return False
